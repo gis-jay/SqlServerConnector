@@ -89,43 +89,6 @@ class SqlServerImporter(object):
 		logging.info("End " + func)
 		return
 		
-	def test(self):
-		func = 'SqlServerImporter.test'
-		logging.info(" ")
-		logging.info(" ")
-		logging.info("******************************************************************************")
-		logging.info("Begin " + func)
-		
-		for replica in self._replicas.replicas:
-			self.testReplica(replica)
-			
-		logging.info("End " + func)
-		logging.info("******************************************************************************")
-		return
-		
-	def testReplica(self, replica):
-		func = 'SqlServerImporter.testReplica'
-		logging.info("Begin " + func)
-		logging.info("Processing replica " + replica.name)
-		
-		num_changes = 0
-		replica.connect()
-		for dataset in replica.datasets:
-			logging.debug('Processing dataset in ' + dataset.sdeTable)
-			key = 106626
-			where_clause = 'replication_action_cde is Null'
-			layer = dataset.makeLayerFromQuery(where_clause)
-			num_records = int(arcpy.GetCount_management(layer).getOutput(0))
-			if num_records > 0:
-				cursor = arcpy.SearchCursor(layer)
-				for feature in cursor:
-					dataset.logBgBaseInfo(feature, None)
-			
-		replica.closeConnection()
-
-		logging.info("End " + func)
-		return
-		
 	def _importChanges(self, dataset):
 		func = 'SqlServerImporter._importChanges'
 		logging.info('Begin ' + func)
