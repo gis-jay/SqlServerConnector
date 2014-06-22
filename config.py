@@ -1,21 +1,23 @@
 connector = {
 	"importLogFile":r"[path]\logs\warehouse_to_sde.log",
 	"exportLogFile":r"[path]\logs\sde_to_warehouse.log",
+	"testLogFile":r"[path]\logs\test.log",
+	"clearCdc":True,
 	"replicas":[
 		{
 			"name":"DBO.BGBASE_StagingToProduction",
 			"disabled":False,
 			"sqlServer": {
-				"server":"[sqlserver]",
+				"server":"[server]",
 				"database":"Warehouse"
 			},
 			"tempPath":r"[path]\temp",
-			"exportPath":r"[path]\NOT PROCESSED",
-			"lockFilePath":r"[path]\StagingToProduction.loc",
+			"exportPath":r"\\[path]\BGBASE\BGBASE6\IMPORT\NOT PROCESSED",
+			"lockFilePath":r"[path]\temp\StagingToProduction.loc",
 			"deleteTempFiles":True,
 			"autoReconcile":True,
-			"stagingWorkspace":r"[path]\Staging.sde",
-			"productionWorkspace":r"[path]\Production.sde",
+			"stagingWorkspace":r"[path]\Staging@ARCGIS10.sde",
+			"productionWorkspace":r"[path]\Production@ARCGIS10.sde",
 			"sqlserverEditVersion":"DBO.BG-BASE",
 			"stagingEditVersions":["DBO.DESKTOP","DBO.MOBILE"],
 			"stagingDefaultVersion":"DBO.DEFAULT",
@@ -76,7 +78,8 @@ connector = {
 					"sdeDataset":
 					{
 						"table":"Staging.dbo.PLANTS_MEASURE_BY",
-						"primaryKey":"rep_id"
+						"primaryKey":"rep_id",
+						"primaryKeyOld":"ACC_NUM_AND_QUAL"
 					}
 				}
 			]

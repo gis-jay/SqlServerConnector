@@ -45,6 +45,27 @@ class Replicas(object):
 ###################################################################################################
 
 class Replica(object):
+	
+	#config: A Python dictionary that has the following structure:
+	#{
+	#	"name":"DBO.StagingToProduction",
+	#	"disabled":False,
+	#	"sqlServer": {
+	#		"server":"arcgis10.arbweb.harvard.edu",
+	#		"database":"Warehouse"
+	#	},
+	#	"tempPath":r"C:\Users\Public\Documents\BGBase Connector\temp",
+	#	"exportPath":r"C:\Users\Public\Documents\BGBase Connector\temp",
+	#	"lockFilePath":r"C:\Users\Public\Documents\BGBase Connector\temp\bgimport.loc",
+	#	"deleteTempFiles":True,
+	#	"autoReconcile":True,
+	#	"stagingWorkspace":"C:\Users\Public\Documents\SDE Connections\Staging@ARCGIS10.sde",
+	#	"productionWorkspace":"C:\Users\Public\Documents\SDE Connections\Production@ARCGIS10.sde",
+	#	"sqlserverEditVersion":"DBO.BG-BASE",
+	#	"stagingEditVersions":["DBO.DESKTOP","DBO.MOBILE"],
+	#	"stagingDefaultVersion":"dbo.DEFAULT",
+	#	"datasets":[array of Dataset config, see the Dataset class]
+	#}
 	def __init__(self, config):
 		self.name = config['name']
 		self.datasets = []
@@ -137,6 +158,24 @@ class Replica(object):
 ###################################################################################################
 
 class Dataset(object):
+	#config: A Python dictionary that has the following structure:
+	#	{
+	#		"cdcFunction":"cdc.fn_cdc_get_all_changes_dbo_PLANTS_LOCATION",
+	#		"sqlserverDataset":
+	#		{
+	#			"table":"Warehouse.cdc.dbo_PLANTS_LOCATION_CT",
+	#			"primaryKey":"rep_id",
+	#			"xField":"X_COORD",
+	#			"yField":"Y_COORD"
+	#		},
+	#		"sdeDataset":
+	#		{
+	#			"table":"Staging.dbo.PLANTS_LOCATION",
+	#			"primaryKey":"rep_id"
+	#		}
+	#	}
+	#
+	#replica: The parent Replica object
 	def __init__(self, config, replica):
 		self.replica = replica
 		if 'disabled' in config:
@@ -178,7 +217,7 @@ class Dataset(object):
 			now = dateUtil.now()
 			self._changeCursor = self.replica.getConnection().cursor()
 		
-			logging.debug('Calling CDC function ' + self.cdcFunction)
+			#logging.debug('Calling CDC function ' + self.cdcFunction)
 			sql = '''
 			DECLARE @begin_time datetime, @end_time datetime, @begin_lsn binary(10), @end_lsn binary(10);
 SET @begin_time = \'2001-01-01 00:00:01\';
@@ -187,6 +226,9 @@ SELECT @begin_lsn = sys.fn_cdc_map_time_to_lsn('smallest greater than', @begin_t
 SELECT @end_lsn = sys.fn_cdc_map_time_to_lsn('largest less than or equal', @end_time);
 SELECT *, CONVERT(VARCHAR(MAX), __$seqval, 2) as __$CDCKEY FROM ''' + self.cdcFunction + '''(@begin_lsn, @end_lsn, 'all');
 '''
+			#selecting from CDC table instead, due to SQL Server CDC bug with multiple tables
+			logging.debug('Selecting CDC data from ' + self.cdcTable)
+			sql = 'SELECT *, CONVERT(VARCHAR(MAX), __$seqval, 2) as __$CDCKEY FROM ' + self.cdcTable
 			try:
 				self._changeCursor.execute(sql)
 			except:
@@ -256,6 +298,8 @@ SELECT *, CONVERT(VARCHAR(MAX), __$seqval, 2) as __$CDCKEY FROM ''' + self.cdcFu
 		return
 		
 	def getSdeTablePath(self):
+		#The BG-BASE SDE version doesn't seem to persist the first edit correctly.
+		#We're going to use the default SDE version instead.
 		return os.path.join(self.replica.stagingWorkspace, self.sdeTable)
 
 	def makeLayer(self, key):
@@ -267,10 +311,11 @@ SELECT *, CONVERT(VARCHAR(MAX), __$seqval, 2) as __$CDCKEY FROM ''' + self.cdcFu
 		layer_name = "lyr" + str(uuid.uuid1()).replace("-", "")
 		if self.isSpatial:
 			arcpy.MakeFeatureLayer_management(feature_class, layer_name, where_clause)
-			logging.debug('Changing version to Desktop')
-			arcpy.ChangeVersion_management(layer_name,'TRANSACTIONAL', 'DBO.DESKTOP','')
-			logging.debug('Changing version to BG-BASE')
-			arcpy.ChangeVersion_management(layer_name,'TRANSACTIONAL', self.replica.sqlserverEditVersion,'')
+			#arcpy.MakeFeatureLayer_management(feature_class, layer_name, where_clause)
+			#logging.debug('Changing version to Desktop')
+			#arcpy.ChangeVersion_management(layer_name,'TRANSACTIONAL', 'DBO.DESKTOP','')
+			#logging.debug('Changing version to BG-BASE')
+			#arcpy.ChangeVersion_management(layer_name,'TRANSACTIONAL', self.replica.sqlserverEditVersion,'')
 		else:
 			arcpy.MakeTableView_management(feature_class, layer_name, where_clause)
 		return layer_name

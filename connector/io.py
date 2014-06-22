@@ -22,8 +22,9 @@ from time import strftime
 class SqlServerImporter(object):
 
 	#replicas:	A db.Replicas object.
-	def __init__(self, replicas):
+	def __init__(self, replicas, clearCdc):
 		self._replicas = replicas
+		self._clearCdc = clearCdc
 		self._dbutil = util.DBUtil()
 		
 	def run(self):
@@ -70,13 +71,14 @@ class SqlServerImporter(object):
 				logging.info('Failed to refresh staging from SQL Server, SDE sync will not run')
 			logging.info("End " + func)
 			return
-			
-		if replica.autoReconcile == True and self._reconcileStaging(replica) == False:
+		
+		#Using the default SDE version instead of BG-BASE version. No need to reconcile.
+		"""if replica.autoReconcile == True and self._reconcileStaging(replica) == False:
 			lockfile.unlock()
 			logging.info('Failed to reconcile data in staging between versions. SDE sync will not run')
 			logging.info("End " + func)
 			logging.info("******************************************************************************")
-			return
+			return"""
 			
 		if self._syncWithProd(replica) == False:
 			lockfile.unlock()
@@ -85,7 +87,52 @@ class SqlServerImporter(object):
 			logging.info("******************************************************************************")
 			return
 			
+		logging.debug('Performing second flush...');
+		if self._syncWithProd(replica) == False:
+			lockfile.unlock()
+			logging.info('Failed to sync data between staging to production. SDE sync will not run')
+			logging.info("End " + func)
+			logging.info("******************************************************************************")
+			return
+			
 		lockfile.unlock()
+		logging.info("End " + func)
+		return
+		
+	def test(self):
+		func = 'SqlServerImporter.test'
+		logging.info(" ")
+		logging.info(" ")
+		logging.info("******************************************************************************")
+		logging.info("Begin " + func)
+		
+		for replica in self._replicas.replicas:
+			self.testReplica(replica)
+			
+		logging.info("End " + func)
+		logging.info("******************************************************************************")
+		return
+		
+	def testReplica(self, replica):
+		func = 'SqlServerImporter.testReplica'
+		logging.info("Begin " + func)
+		logging.info("Processing replica " + replica.name)
+		
+		num_changes = 0
+		replica.connect()
+		for dataset in replica.datasets:
+			logging.debug('Processing dataset in ' + dataset.sdeTable)
+			key = 106626
+			where_clause = 'replication_action_cde is Null'
+			layer = dataset.makeLayerFromQuery(where_clause)
+			num_records = int(arcpy.GetCount_management(layer).getOutput(0))
+			if num_records > 0:
+				cursor = arcpy.SearchCursor(layer)
+				for feature in cursor:
+					dataset.logBgBaseInfo(feature, None)
+			
+		replica.closeConnection()
+
 		logging.info("End " + func)
 		return
 		
@@ -152,7 +199,10 @@ class SqlServerImporter(object):
 			logging.error(msg)
 		finally:
 			if num_total > 0:
-				dataset.clearChanges(processedRecords)
+				if self._clearCdc == True:
+					dataset.clearChanges(processedRecords)
+				else:
+					logging.info('clearCdc is set to False in config file. CDC still contains change records')
 			logging.info('End ' + func)
 		return num_total
 			
@@ -214,10 +264,26 @@ class SqlServerImporter(object):
 			num_features = 0
 			for feature in features:
 				num_features = num_features + 1
+				
+				#special logging code, remove when fixed.
+				bCheckForFirst = True
+				bWasFirst = False
+				
+				if bCheckForFirst:
+					bWasFirst = feature.getValue('line_seq') == 1
+					
+				if bWasFirst == True:
+					logging.debug('--------------- Begin updating record where line_seq = 1 ---------------')
+				
 				dataset.logBgBaseInfo(feature, row)
 				
 				if self._loadFeature(feature, row, dataset, field_names, fields) == True:
 					features.updateRow(feature)
+					
+					if bWasFirst == True:
+						logging.debug('Line seq for SDE should now be 2:')
+						dataset.logBgBaseInfo(feature, row)
+						logging.debug('---------------   End updating record where line_seq = 1 ---------------')
 					logging.debug('Successfully updated record ' + str(key))
 					bUpdate = True
 				else:
@@ -598,3 +664,44 @@ class GeodatabaseExporter(object):
 			logging.error(msg)
 		logging.info("End " + func)
 		return result
+
+"""
+DECLARE @begin_time datetime, @end_time datetime, @begin_lsn binary(10), @end_lsn binary(10);
+SET @begin_time = '2000-01-01 00:00:00'
+SET @end_time = '2020-01-01 00:00:00';
+SELECT @begin_lsn = sys.fn_cdc_map_time_to_lsn('smallest greater than', @begin_time);
+SELECT @end_lsn = sys.fn_cdc_map_time_to_lsn('largest less than or equal', @end_time);
+SELECT * FROM cdc.fn_cdc_get_all_changes_dbo_PLANTS_LOCATION(@begin_lsn, @end_lsn, 'all');
+
+select * from Warehouse.cdc.dbo_PLANTS_LOCATION_CT
+where
+CONVERT(VARCHAR(MAX), __$seqval, 2) in ('000002230000015D0003', '0000022B000006C80002', '0000022B000006E90002')
+
+update PLANTS_LOCATION set GRID = 'TEST2.0'
+where ACC_NUM = '10000' and line_seq = 1
+
+SELECT * FROM Staging.dbo.PLANTS_LOCATION
+where ACC_NUM = '10000' and line_seq = 1
+order by SDE_STATE_ID desc
+
+SELECT * FROM Staging.dbo.a67
+where ACC_NUM = '10000' and line_seq = 1
+
+INSERT INTO Warehouse.dbo.PLANTS_LOCATION(ACC_NUM,ACC_NUM_QUAL,X_COORD,Y_COORD,line_seq)
+VALUES('-10000', 'A', 701987, 473261,1)
+
+INSERT INTO Warehouse.dbo.PLANTS_LOCATION(ACC_NUM,ACC_NUM_QUAL,X_COORD,Y_COORD,line_seq)
+VALUES('-10001', 'A', 703987, 475261,1)
+
+
+select 0 as OBJECTID, ACC_NUM, rep_id, 'Warehouse' as SOURCE from Warehouse.dbo.PLANTS_LOCATION where ACC_NUM like '-1%'
+union
+select OBJECTID, ACC_NUM, rep_id, 'Staging' from Staging.dbo.PLANTS_LOCATION where ACC_NUM like '-1%'
+union
+select OBJECTID, ACC_NUM, rep_id, 'Staging Version' from Staging.dbo.a76 where ACC_NUM like '-1%'
+union
+select OBJECTID, ACC_NUM, rep_id, 'Production' from Production.dbo.PLANTS_LOCATION where ACC_NUM like '-1%'
+union
+select OBJECTID, ACC_NUM, rep_id, 'Production Version' from Production.dbo.a46 where ACC_NUM like '-1%'
+
+"""
