@@ -24,3 +24,36 @@ code that will generate an XML data change file and place the file in a location
 the internal BG-BASE database.
 
 *It is important to note that the Connector only supports updates that are made in the ArcGIS database. New records from ArcGIS will not be applied to BG-BASE.*
+
+###Code Structure
+Connector has the following code structure:
+
+* *config.py*: This top level file is a Python dictionary that configures the Connector.
+* *sde_to_xml.py*: This top level file loads the Connector API to generate the XML change file for changes that originated in the geodatabase.
+* *sqlserver_to_sde.py*: This top level file loads the Connector API to import changes that originated in BG-BASE into the geodatabase.
+* *connector*: Package containing the implementation files of the Connector API.
+	* *db.py*: File that contains Python classes that encapsulate database functionality.
+		* *Replicas*: Python class that parses replicas from the config file.
+		* *Replica*: Python class that encapsulates a replica. A replica contains an array of Datasets and manages the ODBC connection to the SQL Server.
+		* *Dataset*: Python class that encapsulates a dataset. A dataset has a properties for a SQL Server table and a geodatabase dataset. The dataset class also contains functions that are used to read and parse data changes from the SQL Server CDC tables.
+	* *io.py*: File that contains Python classes that encapsulate import and export functionality of the Connector.
+		* *SqlServerImporter*: Python class that is called by the sqlserver_to_sde to import changes from the CDC tables into the geodatabase.
+		* *GeodatabaseExporter*: Python class that is called by the sde_to_xml to generate an XML change file between geodatabase replicas.
+	* *util*: File containing utility classes.
+		* *DBUtil*: Python class that provides helper functions for ODBC objects.
+		* *DateUtil*: Python class that provides helper functions for Date/Time objects.
+		* *LockFile*: Python class that helps the Connector from running in multiple instances.
+
+###Data Preparation
+First, a SQL Server instance of the BG-BASE database must be created. **_Donna, is this standard functionality within BG-BASE? Or is this custom per client with help from BG-BASE?_**
+TODO: Finish this portion.
+
+Once the data is ready in Warehouse, CDC must then be enaled per table that is to be managed in ArcGIS. **_Donna, this is where you can add your CDC notes._**.
+
+Next, a spatial representation of the tables that are to be maintained in ArcGIS must be created in a Geodatabase. **_TODO: I created a python toolbox to accomplish this
+for the Arboretum. This toolbox is not part of GitHub yet. I will test in out on the Arboretum Server and add to GitHub if it's ready._**
+
+A geodatabase replica must be created once the spatial data is ready. **_Jason TODO: Outline the steps to create a replica in ArcGIS._**
+
+###Configure the Connector
+**_Jason TODO: Describe the contents of the connector_**
