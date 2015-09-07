@@ -50,8 +50,11 @@ TODO: Finish this portion.
 
 Once the data is ready in Warehouse, CDC must then be enaled per table that is to be managed in ArcGIS. **_Donna, this is where you can add your CDC notes._**.
 
-Next, a spatial representation of the tables that are to be maintained in ArcGIS must be created in a Geodatabase. **_TODO: I created a python toolbox to accomplish this
-for the Arboretum. This toolbox is not part of GitHub yet. I will test in out on the Arboretum Server and add to GitHub if it's ready._**
+Next, a spatial representation of the tables that are to be maintained in ArcGIS must be created in a Geodatabase. There is an ArcGIS Python Toolbox in the repository,
+located at toolboxes\SpatialDataCreation.pyt. The toolbox contains a tool named "Create Feature Class From Table" that will create a feature class based on X and Y fields.
+Below is a screenshot of the inputs to the tool:
+
+![Image of Python Toolbox Tool](doc/CreateFeatureClassFromTable.png)
 
 A geodatabase replica must be created once the spatial data is ready. **_Jason TODO: Outline the steps to create a replica in ArcGIS._**
 
