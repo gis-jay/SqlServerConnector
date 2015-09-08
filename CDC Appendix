@@ -1,0 +1,30 @@
+Appendix 1: Cleaning CDC Tables in SQL
+
+Safest way to do this is delete and recreate the feature class, that will remove all the tables and A and D tables.  
+So you recreate and re-register as versioned which will create new A and D tables (new numbers as well, since the Feature Class will have a new registration id in the SDE_table_registry)  …..that is the cleanest method.   Others – you could potentially do a truncate table if you are using a spatial type in SQL Server, but care needs to be taken as there may be relationships built against fields that may be getting removed.   So yes you could truncate as long as you truncate the D table as well, and run a compress to clean things up in the GDB/SDE administrative schema tables.  Then you might want to run these queries, but never delete state_ids out of any of the administrative tables, or A and D tables or truncate them without first checking with ESRI, AND having a backup…   so typically I think deleting the feature class is the safest…
+
+a) Check for Incomplete or missing lineages:  
+`select state_id from sde.states ST where not exists  
+(select * from sde.state_lineages SL where ST.lineage_name = SL.lineage_name and SL.lineage_id = 0);`  
+   
+b) Check for Invalid parent state ids:  
+`select state_id from sde.states where parent_state_id not in
+(select state_id from sde.states)
+order by state_id;`  
+  
+c) Check for States with no lineages:  
+`select distinct state_id from sde.states where lineage_name not in
+(select lineage_name from sde.state_lineages)
+order by state_id;`  
+
+`select distinct state_id from sde.states where state_id not in
+(select lineage_id from sde.state_lineages)
+order by state_id;`  
+
+d)Check for edits referencing states with no parent state:    
+`select state_id from sde.MVTABLES_MODIFIED  
+where state_id in (select state_id from sde.states where parent_state_id not in
+(select state_id from sde.states));`
+
+
+
