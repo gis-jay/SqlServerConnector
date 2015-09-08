@@ -65,7 +65,7 @@ Step 1: Open ArcMap, add the spatial data from SDE to ArcMap and on the Distribu
 Step 2: Choose the "One way replica" option, with the "Parent to child" option.
 ![Create Replica Step 2](doc/CreateReplicaStep2.png)
 
-Step 3: Enter a name for your replica. *Be sure to check the "Show advanced options" checkbox berfore pushing next.*
+Step 3: Enter a name for your replica. _Be sure to check the "Show advanced options" checkbox before pushing next._
 ![Create Replica Step 3](doc/CreateReplicaStep3.png)
 
 Step 4: Choose your model type.
