@@ -52,37 +52,37 @@ Once the data is ready in Warehouse, CDC must then be enabled per table that is 
 ###CDC Setup
 The following are steps in order, to set up the SQL Server to work as a BG-Connector.
 
-Warehouse Database Enable CDC
+**Warehouse Database Enable CDC**  
 There are several steps to follow in order to create tables that are editable by ArcGIS. The first step involves enabling CDC (Change Detection Capture) on a database.
 
-Enable database:
-USE *databasename*
-GO 
-EXEC sys.sp_cdc_enable_db 
-GO
+Enable database:  
+    `USE *databasename*    
+    GO    
+    EXEC sys.sp_cdc_enable_db     
+    GO`    
 
-If an error message is encountered, you can try:
-USE *databasename*
-GO 
-EXEC sp_changedbowner 'sa' 
-GO
+If an error message is encountered, you can try:  
+	`USE *databasename*
+	GO 
+	EXEC sp_changedbowner 'sa' 
+	GO`
 
-Enable table(s):
-USE *databasename*
-GO
-EXEC sys.sp_cdc_enable_table
-@source_schema = N'dbo',
-@source_name = N'TABLE_NAME’,
-@role_name = N'CDC_admin'
-GO
+Enable table(s):  
+	`USE *databasename*
+	GO
+	EXEC sys.sp_cdc_enable_table
+	@source_schema = N'dbo',
+	@source_name = N'TABLE_NAME’,
+	@role_name = N'CDC_admin'
+	GO`
 
-PLANTS table:  when enable cdc on table correctly you should get this message:
-Job 'cdc.Production_capture' started successfully.
-Job 'cdc.Production_cleanup' started successfully.
-Note: @role_name. If there is any restriction of how data should be extracted from database, this option is used to specify any role which is following restrictions and gating access to data to this option if there is one. If you do not specify any role and, instead, pass a NULL value, data access to this changed table will not be tracked and will be available to access by everybody.
-Reference: http://lennilobel.wordpress.com/2010/02/13/using-sql-server-2008-change-data-capture/
+When CDC is enabled on a table correctly, you should get this message:  
+`Job 'cdc.Production_capture' started successfully.`
+`Job 'cdc.Production_cleanup' started successfully.`
+Note: @role_name. If there is any restriction of how data should be extracted from database, this option is used to specify any role which is following restrictions and gating access to data to this option if there is one. If you do not specify any role and, instead, pass a NULL value, data access to this changed table will not be tracked and will be available to access by everybody.  
+Reference: http://lennilobel.wordpress.com/2010/02/13/using-sql-server-2008-change-data-capture/  
 
-Change tables are generated in the database System Tables with unique fields that indicate what action was performed:
+Change tables are generated in the database System Tables with unique fields that indicate what action was performed:  
 INSERT (_$operation = 2)
 UPDATE (_$operation = 3 [before]; _$operation = 4 [after])
 DELETE (_$operation = 1)
@@ -91,14 +91,14 @@ Reference: http://msdn.microsoft.com/en-us/library/bb500305.aspx
 CDC SYNC TABLES
 There's a table named dbo.SDE_SYNC_TABLES in Warehouse SQLServer 2008 database that contains records of CDC table names and functions, and SDE feature class names that controls the python code. The python code iterates through this table, and calls the CDC function to get the changes from the CDC table and put them in the feature class. -6/7/13 Jason Sardano
 
-SQL Server Agent
+##SQL Server Agent##
 Once you have the database and desired tables with CDC’s enabled, you must start SQL Server Agent or the changes will not be captured.  
-To start the Agent: 
-1.	On the Start menu, point to All Programs, point to Microsoft SQL Server 2008 R2, point to Configuration Tools, and then click SQL Server Configuration Manager.
-2.	In SQL Server Configuration Manager, expand Services, and then click SQL Agent.
-3.	In the results pane, right-click any instance, and then click Start. A green arrow on the icon next to the SQL Server Agent and on the toolbar indicates that SQL Server Agent started successfully.
-4.	Click OK.
-Our SQL server Agent kept turning off. If you encounter this problem you can try configuring according to this document: http://technet.microsoft.com/en-us/magazine/gg313742.aspx, but already had this configuration. I went into SQL Server Configuration Manager and change the SQLServerAgent Start Mode from Manual to Automatic.
+To start the Agent:   
+1. On the Start menu, point to All Programs, point to Microsoft SQL Server 2008 R2, point to Configuration Tools, and then click SQL Server Configuration Manager.  
+2. In SQL Server Configuration Manager, expand Services, and then click SQL Agent.  
+3. In the results pane, right-click any instance, and then click Start. A green arrow on the icon next to the SQL Server Agent and on the toolbar indicates that SQL Server Agent started successfully.  
+4. Click OK.  
+Our SQL server Agent kept turning off. If you encounter this problem you can try configuring according to this document: http://technet.microsoft.com/en-us/magazine/gg313742.aspx, but already had this configuration. I went into SQL Server Configuration Manager and change the SQLServerAgent Start Mode from Manual to Automatic.  
 
 Create Multiversion view 
 Just a view or query that looks like a table
