@@ -56,7 +56,30 @@ Below is a screenshot of the inputs to the tool:
 
 ![Image of Python Toolbox Tool](doc/CreateFeatureClassFromTable.png)
 
-A geodatabase replica must be created once the spatial data is ready. **_Jason TODO: Outline the steps to create a replica in ArcGIS._**
+Once your spatial data is ready, you must then create a geodatabase replica so that changes that are made in ArcGIS are propagated to BG-BASE. You can find instructions for creating
+replicas [here] (http://resources.arcgis.com/EN/HELP/MAIN/10.2/index.html#//003n000000tm000000). Below are screenshots from creating the replica at the Arnold Arboretum.
+
+Step 1: Open ArcMap, add the spatial data from SDE to ArcMap and on the Distributed Geodatabase toolbar, click the "Create Replica" button.
+![Create Replica Step 1](doc/CreateReplicaStep1.png)
+
+Step 2: Choose the "One way replica" option, with the "Parent to child" option.
+![Create Replica Step 2](doc/CreateReplicaStep2.png)
+
+Step 3: Enter a name for your replica. *Be sure to check the "Show advanced options" checkbox berfore pushing next.*
+![Create Replica Step 3](doc/CreateReplicaStep3.png)
+
+Step 4: Choose your model type.
+![Create Replica Step 4](doc/CreateReplicaStep4.png)
+
+Step 5: Enter the advanced options for the replica. Be sure to check "The full extent of the data" option. In the grid control that lists the datasets that are
+participating in the replica, be sure that the "All Features" select box is selected in the "Check Out" column.
+![Create Replica Step 5](doc/CreateReplicaStep5.png)
+
+Step 6: Specify the SDE keywords for the replica.
+![Create Replica Step 6](doc/CreateReplicaStep6.png)
+
+Step 7: Press the Finish button to create the replica.
+![Create Replica Step 7](doc/CreateReplicaStep7.png)
 
 ###Configure the Connector
 **_Jason TODO: Describe the contents of the connector_**
