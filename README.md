@@ -47,7 +47,74 @@ BG-Connector has the following code structure:
 ###Data Preparation
 First, a SQL Server instance of the *BG-BASE* database must be created. This is standard functionality within *BG-BASE*, implemented by *BG-BASE*.
 
-Once the data is ready in Warehouse, CDC must then be enabled per table that is to be managed in ArcGIS. **_Donna, this is where you can add your CDC notes._**.
+Once the data is ready in Warehouse, CDC must then be enabled per table that is to be managed in ArcGIS. 
+
+###CDC Setup
+The following are steps in order, to set up the SQL Server to work as a BG-Connector.
+
+Warehouse Database Enable CDC
+There are several steps to follow in order to create tables that are editable by ArcGIS. The first step involves enabling CDC (Change Detection Capture) on a database.
+
+Enable database:
+USE *databasename*
+GO 
+EXEC sys.sp_cdc_enable_db 
+GO
+
+If an error message is encountered, you can try:
+USE *databasename*
+GO 
+EXEC sp_changedbowner 'sa' 
+GO
+
+Enable table(s):
+USE *databasename*
+GO
+EXEC sys.sp_cdc_enable_table
+@source_schema = N'dbo',
+@source_name = N'TABLE_NAME’,
+@role_name = N'CDC_admin'
+GO
+
+PLANTS table:  when enable cdc on table correctly you should get this message:
+Job 'cdc.Production_capture' started successfully.
+Job 'cdc.Production_cleanup' started successfully.
+Note: @role_name. If there is any restriction of how data should be extracted from database, this option is used to specify any role which is following restrictions and gating access to data to this option if there is one. If you do not specify any role and, instead, pass a NULL value, data access to this changed table will not be tracked and will be available to access by everybody.
+Reference: http://lennilobel.wordpress.com/2010/02/13/using-sql-server-2008-change-data-capture/
+
+Change tables are generated in the database System Tables with unique fields that indicate what action was performed:
+INSERT (_$operation = 2)
+UPDATE (_$operation = 3 [before]; _$operation = 4 [after])
+DELETE (_$operation = 1)
+Reference: http://msdn.microsoft.com/en-us/library/bb500305.aspx
+
+CDC SYNC TABLES
+There's a table named dbo.SDE_SYNC_TABLES in Warehouse SQLServer 2008 database that contains records of CDC table names and functions, and SDE feature class names that controls the python code. The python code iterates through this table, and calls the CDC function to get the changes from the CDC table and put them in the feature class. -6/7/13 Jason Sardano
+
+SQL Server Agent
+Once you have the database and desired tables with CDC’s enabled, you must start SQL Server Agent or the changes will not be captured.  
+To start the Agent: 
+1.	On the Start menu, point to All Programs, point to Microsoft SQL Server 2008 R2, point to Configuration Tools, and then click SQL Server Configuration Manager.
+2.	In SQL Server Configuration Manager, expand Services, and then click SQL Agent.
+3.	In the results pane, right-click any instance, and then click Start. A green arrow on the icon next to the SQL Server Agent and on the toolbar indicates that SQL Server Agent started successfully.
+4.	Click OK.
+Our SQL server Agent kept turning off. If you encounter this problem you can try configuring according to this document: http://technet.microsoft.com/en-us/magazine/gg313742.aspx, but already had this configuration. I went into SQL Server Configuration Manager and change the SQLServerAgent Start Mode from Manual to Automatic.
+
+Create Multiversion view 
+Just a view or query that looks like a table
+http://resources.arcgis.com/content/kbase?fa=articleShow&d=24647
+http://webhelp.esri.com/arcgisserver/9.3.1/java/index.htm#geodatabases/using_-1884018468.htm
+To create a multiversion table, execute the following code in a Command Prompt window:
+
+>sdetable -o create_mv_view -T TABLE_NAME_MV -t TABLE_NAME -i sde:sqlserver:SERVERNAME -D DATABASENAME -u USERNAME -p PASSWORD
+
+Do not delete a multiversion table view from SQL directly, you should use the delete command from the Command Prompt.
+
+>sdetable -o delete_mv_view -t TABLE_NAME_MV -i sde:sqlserver:SERVERNAME -D DATABASENAME -u USERNAME -p PASSWORD
+
+If having trouble, check spelling of tables, or Need to register the table(s) first: http://edndoc.esri.com/arcsde/9.0/admin_cmd_refs/sdetable.htm
+
+------------------------- end Donna's CDC stuff
 
 Next, a spatial representation of the tables that are to be maintained in ArcGIS must be created in a Geodatabase. There is an ArcGIS Python Toolbox in the repository,
 located at toolboxes\SpatialDataCreation.pyt. The toolbox contains a tool named "Create Feature Class From Table" that will create a feature class based on X and Y fields.
